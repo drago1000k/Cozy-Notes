@@ -1,0 +1,284 @@
+@import "tailwindcss";
+
+@layer base {
+  :root, .theme-clear {
+    --color-bg: #fbe6d4;
+    --color-wall: #f0cca8;
+    --color-wood: #c97f4e;
+    --color-wood-dark: #a65e33;
+    --color-whiteboard: #fff9f0;
+    --color-whiteboard-border: #e0be9c;
+    --color-text: #5a311b;
+    --color-muted: #a36f52;
+    --color-accent: #e06d41;
+    --color-stripe: rgba(200, 110, 50, 0.08);
+    --color-stripe-light: rgba(200, 110, 50, 0.05);
+  }
+
+  .theme-cloudy {
+    --color-bg: #e2e8f0;
+    --color-wall: #cbd5e1;
+    --color-wood: #94a3b8;
+    --color-wood-dark: #64748b;
+    --color-whiteboard: #f8fafc;
+    --color-whiteboard-border: #94a3b8;
+    --color-text: #334155;
+    --color-muted: #64748b;
+    --color-accent: #cbd5e1;
+    --color-stripe: rgba(0, 0, 0, 0.05);
+    --color-stripe-light: rgba(0, 0, 0, 0.03);
+  }
+
+  .theme-rainy {
+    --color-bg: #e0f2fe;
+    --color-wall: #bae6fd;
+    --color-wood: #38bdf8;
+    --color-wood-dark: #0284c7;
+    --color-whiteboard: #f0f9ff;
+    --color-whiteboard-border: #7dd3fc;
+    --color-text: #0c4a6e;
+    --color-muted: #0284c7;
+    --color-accent: #38bdf8;
+    --color-stripe: rgba(2, 132, 199, 0.08);
+    --color-stripe-light: rgba(2, 132, 199, 0.05);
+  }
+
+  .theme-magical {
+    --color-bg: #1c1e26;
+    --color-wall: #262936;
+    --color-wood: #40475e;
+    --color-wood-dark: #2a2f40;
+    --color-whiteboard: #1a1d26;
+    --color-whiteboard-border: #4d5775;
+    --color-text: #d8dbe6;
+    --color-muted: #7c85a3;
+    --color-accent: #869ce0;
+    --color-stripe: rgba(0, 0, 0, 0.2);
+    --color-stripe-light: rgba(0, 0, 0, 0.1);
+  }
+
+  * {
+    box-sizing: border-box;
+    transition: background-color 2s ease, border-color 2s ease, box-shadow 2s ease, color 2s ease;
+  }
+
+  /* Don't transition transform or opacity on everything */
+  .no-transition-all * {
+    transition: none !important;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    overflow: hidden;
+  }
+
+  #root {
+    width: 100vw;
+    height: 100vh;
+  }
+}
+
+@layer utilities {
+  .font-handwriting {
+    font-family: 'Patrick Hand', cursive;
+  }
+  .paper-texture {
+    /* Subtle noise for paper */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+}
+
+/* Wallpaper subtle stripes */
+.wallpaper {
+  background-color: var(--color-wall);
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 40px,
+      var(--color-stripe) 40px,
+      var(--color-stripe) 41px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 80px,
+      var(--color-stripe-light) 80px,
+      var(--color-stripe-light) 81px
+    );
+}
+
+/* Whiteboard texture */
+.whiteboard {
+  background-color: var(--color-whiteboard);
+}
+
+/* Wood grain texture on desk */
+.wood-desk {
+  background: linear-gradient(
+    180deg,
+    var(--color-wood) 0%,
+    var(--color-wood-dark) 100%
+  );
+}
+
+/* Sticky note paper feel */
+.sticky-note {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  border-radius: 2px;
+  filter: drop-shadow(2px 6px 12px rgba(0, 0, 0, 0.15));
+  transform-origin: center center;
+}
+
+.sticky-note:active {
+  cursor: grabbing;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-muted);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+@keyframes steam {
+  0% { opacity: 0; transform: translateY(0) scale(1); }
+  50% { opacity: 0.6; }
+  100% { opacity: 0; transform: translateY(-20px) scale(1.4); }
+}
+
+@keyframes fast-typing {
+  0%, 100% { transform: rotate(-18deg) translateY(0); }
+  50% { transform: rotate(-10deg) translateY(2px); }
+}
+
+@keyframes fast-typing-right {
+  0%, 100% { transform: rotate(18deg) translateY(0); }
+  50% { transform: rotate(10deg) translateY(2px); }
+}
+
+@keyframes float-up-fade {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  20% { transform: translateY(-10px) scale(1); opacity: 1; }
+  100% { transform: translateY(-40px) scale(1.2); opacity: 0; }
+}
+
+@keyframes headShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px) rotate(-5deg); }
+  75% { transform: translateX(4px) rotate(5deg); }
+}
+
+@keyframes waveArm {
+  0%, 100% { transform: rotate(45deg); }
+  50% { transform: rotate(100deg); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-steam1 {
+  animation: steam 2s ease-out infinite;
+}
+.animate-steam2 {
+  animation: steam 2s ease-out 0.7s infinite;
+}
+.animate-steam3 {
+  animation: steam 2s ease-out 1.4s infinite;
+}
+
+.animate-type-left {
+  animation: fast-typing 0.15s ease-in-out infinite;
+}
+.animate-type-right {
+  animation: fast-typing-right 0.18s ease-in-out infinite;
+}
+
+.animate-confetti {
+  animation: float-up-fade 1.5s ease-out forwards;
+}
+
+.animate-head-shake {
+  animation: headShake 0.4s ease-in-out infinite;
+}
+
+.animate-wave-arm {
+  animation: waveArm 1s ease-in-out infinite;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Note stack effect */
+.note-stack::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 4px;
+  right: -4px;
+  height: 100%;
+  background: #f9d99a;
+  border-radius: 4px;
+  z-index: -1;
+}
+
+.note-stack::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 8px;
+  right: -8px;
+  height: 100%;
+  background: #f5c97a;
+  border-radius: 4px;
+  z-index: -2;
+}
+
+/* Focus Mode Overlay */
+.focus-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 25; /* Below top nav (30), above desk */
+  pointer-events: none;
+  transition: opacity 1s ease;
+}
+
+/* Lamp glow for night mode */
+.lamp-glow {
+  box-shadow: 0 0 60px 30px rgba(255, 200, 100, 0.15);
+}
+
+/* ContentEditable Placeholder */
+[contenteditable]:empty:before {
+  content: attr(data-placeholder);
+  color: inherit;
+  opacity: 0.5;
+  pointer-events: none;
+}
