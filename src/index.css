@@ -282,3 +282,45 @@
   opacity: 0.5;
   pointer-events: none;
 }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  /* Scale down the whiteboard */
+  .whiteboard-frame {
+    width: 95% !important;
+    height: 48% !important;
+    top: 5% !important;
+  }
+
+  /* Nav bar compact */
+  nav {
+    padding: 6px 12px !important;
+    gap: 6px !important;
+  }
+  nav h1 {
+    font-size: 16px !important;
+  }
+
+  /* Desk width */
+  .desk-wrapper {
+    width: 95% !important;
+  }
+
+  /* Touch targets - minimum 44x44 */
+  button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  nav {
+    padding: 4px 8px !important;
+    flex-wrap: wrap;
+    gap: 4px !important;
+  }
+  nav h1 {
+    font-size: 14px !important;
+  }
+}
+
