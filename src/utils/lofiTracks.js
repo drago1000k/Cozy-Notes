@@ -1,4 +1,4 @@
-const musicFiles = import.meta.glob('../assets/musics/**/*.mp3', { as: 'url', eager: true });
+const musicFiles = import.meta.glob('../assets/Musics/**/*.mp3', { as: 'url', eager: true });
 
 export const TRACKS = [
   {
