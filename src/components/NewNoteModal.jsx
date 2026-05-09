@@ -13,16 +13,22 @@ const NOTE_COLORS = [
   { bg: '#e0f2fe', border: '#38bdf8', label: 'Cyan' },
 ];
 
-export default function NewNoteModal({ onClose, onAdd }) {
-  const [title, setTitle] = useState('');
-  const [text, setText] = useState('');
-  const [colorIndex, setColorIndex] = useState(0);
+export default function NewNoteModal({ onClose, onAdd, onUpdate, editNote }) {
+  const [title, setTitle] = useState(editNote ? editNote.title || '' : '');
+  const [text, setText] = useState(editNote ? editNote.text || '' : '');
+  const [colorIndex, setColorIndex] = useState(editNote && editNote.colorIndex !== undefined ? editNote.colorIndex : 0);
   const [formats, setFormats] = useState({ bold: false, italic: false, underline: false });
   const [isMouseDownOnBackdrop, setIsMouseDownOnBackdrop] = useState(false);
   const editorRef = useRef(null);
 
   useEffect(() => {
+    // Always prefill contentEditable with existing content in edit mode
+    if (editorRef.current && editNote) {
+      editorRef.current.innerHTML = editNote.text || '';
+      setText(editNote.text || '');
+    }
     editorRef.current?.focus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateFormats = () => {
@@ -46,17 +52,22 @@ export default function NewNoteModal({ onClose, onAdd }) {
     setText(e.currentTarget.innerHTML);
   };
 
-  const handleAdd = () => {
+  const handleSubmit = () => {
     const finalText = editorRef.current?.innerHTML || '';
-    if (finalText.trim() || title.trim()) {
-      onAdd(title.trim() || 'Untitled', finalText, colorIndex);
+    const hasContent = finalText.replace(/<[^>]*>/g, '').trim() !== '' || title.trim() !== '';
+    if (hasContent) {
+      if (editNote && onUpdate) {
+        onUpdate(editNote.id, { title: title.trim(), text: finalText, colorIndex });
+      } else if (onAdd) {
+        onAdd(title.trim() || 'Untitled', finalText, colorIndex);
+      }
       onClose();
     }
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      handleAdd();
+      handleSubmit();
     }
     if (e.key === 'Escape') {
       onClose();
@@ -126,7 +137,7 @@ export default function NewNoteModal({ onClose, onAdd }) {
                   className="font-handwriting font-bold text-lg"
                   style={{ color: color.border }}
                 >
-                  New Sticky Note
+                  {editNote ? 'Edit Sticky Note' : 'New Sticky Note'}
                 </span>
               </div>
               <motion.button
@@ -300,20 +311,20 @@ export default function NewNoteModal({ onClose, onAdd }) {
               <motion.button
                 whileHover={{ scale: 1.02, boxShadow: `0 4px 16px ${color.border}50` }}
                 whileTap={{ scale: 0.97 }}
-                onClick={handleAdd}
-                disabled={!text.trim() && !title.trim()}
+                onClick={handleSubmit}
+                disabled={!text.replace(/<[^>]*>/g, '').trim() && !title.trim()}
                 className="flex-1 rounded-lg py-2 text-sm font-bold"
                 style={{
-                  background: (text.trim() || title.trim())
+                  background: (text.replace(/<[^>]*>/g, '').trim() || title.trim())
                     ? `linear-gradient(135deg, ${color.border} 0%, ${color.border}cc 100%)`
                     : `${color.border}40`,
-                  color: (text.trim() || title.trim()) ? 'white' : `${color.border}80`,
-                  cursor: (text.trim() || title.trim()) ? 'pointer' : 'default',
+                  color: (text.replace(/<[^>]*>/g, '').trim() || title.trim()) ? 'white' : `${color.border}80`,
+                  cursor: (text.replace(/<[^>]*>/g, '').trim() || title.trim()) ? 'pointer' : 'default',
                   border: 'none',
                   transition: 'all 0.2s',
                 }}
               >
-                📌 Pin to Board
+                {editNote ? '📝 Save Changes' : '📌 Pin to Board'}
               </motion.button>
             </div>
 

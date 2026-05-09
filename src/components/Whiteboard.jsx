@@ -11,6 +11,7 @@ export default function Whiteboard({ boardRef, totalNotes, doneNotes, children }
   return (
     /* Outer frame — visual only, not ref'd for drag constraints */
     <div
+      className="whiteboard-frame"
       style={{
         position: 'fixed',
         top: '7%',
@@ -114,6 +115,9 @@ export default function Whiteboard({ boardRef, totalNotes, doneNotes, children }
           left: 0,
           right: 0,
           bottom: 0,
+          // Mobile panning: make inner board large
+          minWidth: typeof window !== 'undefined' && window.innerWidth < 768 ? 1000 : 'auto',
+          minHeight: typeof window !== 'undefined' && window.innerWidth < 768 ? 800 : 'auto',
           overflow: 'hidden',
         }}
       >

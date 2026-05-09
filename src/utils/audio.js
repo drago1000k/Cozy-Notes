@@ -412,6 +412,19 @@ export function playKeyboardTap() {
   } catch(error){ console.debug(error); }
 }
 
+// Plays the paper scribble sound from an mp3 file for new note creation
+let newNoteSoundUrl = null;
+export function playNewNoteSound() {
+  try {
+    if (!newNoteSoundUrl) {
+      newNoteSoundUrl = new URL('../assets/sounds/new-note.mp3', import.meta.url).href;
+    }
+    const audio = new Audio(newNoteSoundUrl);
+    audio.volume = 0.5;
+    audio.play().catch(console.debug);
+  } catch (e) { console.debug(e); }
+}
+
 export function playMoodSound(mood) {
   if (mood === 'magical') playMagicTwinkle();
   else if (mood === 'clear') playBirdChirp();

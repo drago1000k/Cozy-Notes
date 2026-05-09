@@ -24,7 +24,16 @@ export function useFirestoreSync() {
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.notes) setNotes(data.notes);
+        if (data.notes) {
+          let mergedNotes = data.notes;
+          if (data.archivedNotes) {
+            // Migrate old archived notes into the main notes array
+            const migrated = data.archivedNotes.map(n => ({ ...n, archived: true }));
+            mergedNotes = [...mergedNotes, ...migrated];
+            // Remove the old field to clean up (optional, but we'll just ignore it in future writes)
+          }
+          setNotes(mergedNotes);
+        }
         if (data.moodState) setMoodState(data.moodState);
         else if (data.mood) setMoodState({ current: data.mood, history: [data.mood] });
       } else {

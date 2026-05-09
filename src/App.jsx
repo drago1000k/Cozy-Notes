@@ -9,7 +9,8 @@ import RainOverlay from './components/RainOverlay';
 import MoodSelector from './components/MoodSelector';
 import TimerModal from './components/TimerModal';
 import AuthScreen from './components/AuthScreen';
-import { toggleRainSound, playSplash, playChime, playMoodSound, playAlarm } from './utils/audio';
+import ArchiveModal from './components/ArchiveModal';
+import { toggleRainSound, playSplash, playChime, playMoodSound, playAlarm, playNewNoteSound } from './utils/audio';
 import { getAiResponse } from './utils/aiResponse';
 import { useAuth } from './context/AuthContext';
 import { useFirestoreSync } from './hooks/useFirestoreSync';
@@ -44,6 +45,8 @@ export default function App() {
   const { notes, setNotes, moodState, setMoodState, loading } = useFirestoreSync();
 
   const [showModal, setShowModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
   const [mascotState, setMascotState] = useState('idle');
   const [timerState, setTimerState] = useState('idle'); // 'idle', 'selecting', 'running', 'complete'
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -169,6 +172,12 @@ export default function App() {
       });
       return nextZ;
     });
+    playNewNoteSound();
+  }, [setNotes]);
+
+  const handleUpdateNote = useCallback((id, updatedData) => {
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...updatedData } : n)));
+    playNewNoteSound();
   }, [setNotes]);
 
   const handleDelete = useCallback((id) => {
@@ -195,6 +204,23 @@ export default function App() {
     });
   }, [setNotes]);
 
+  const handleArchive = useCallback((id) => {
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, archived: true, archivedAt: formatDate() } : n)));
+  }, [setNotes]);
+
+  const handleRestoreNote = useCallback((id) => {
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, archived: false, done: false } : n)));
+  }, [setNotes]);
+
+  const handleDeleteArchived = useCallback((id) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+  }, [setNotes]);
+
+  const handleEditRequest = useCallback((note) => {
+    setEditingNote(note);
+    setShowModal(true);
+  }, []);
+
   const handlePositionChange = useCallback((id, pos) => {
     setNotes((prev) => prev.map((n) => {
       if (n.id !== id) return n;
@@ -211,7 +237,10 @@ export default function App() {
         
         const innerW = boardEl.offsetWidth - BOARD_BORDER * 2;
         const innerH = boardEl.offsetHeight - BOARD_BORDER * 2;
-        const max_X = Math.max(0, innerW - NOTE_W);
+        
+        // Use a wide enough constraint for mobile panning
+        const maxWidth = Math.max(innerW, 1000); 
+        const max_X = Math.max(0, maxWidth - NOTE_W);
         const max_Y = Math.max(0, innerH - BOARD_HEADER - NOTE_H);
         
         newX = Math.max(0, Math.min(newX, max_X));
@@ -233,7 +262,9 @@ export default function App() {
     }, 10000);
   }, [currentMood, handleAddNote]);
 
-  const doneCount = notes.filter((n) => n.done).length;
+  const activeNotes = notes.filter((n) => !n.archived);
+  const archivedNotes = notes.filter((n) => n.archived);
+  const doneCount = activeNotes.filter((n) => n.done).length;
 
   const [magicalParticles, setMagicalParticles] = useState([]);
 
@@ -350,11 +381,11 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 999, background: 'var(--color-bg)', border: '1px solid var(--color-whiteboard-border)' }}>
             <span style={{ fontSize: 14 }}>📋</span>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', fontFamily: 'Nunito, sans-serif' }}>
-              {notes.length} note{notes.length !== 1 ? 's' : ''}
+              {activeNotes.length} note{activeNotes.length !== 1 ? 's' : ''}
             </span>
           </div>
 
-          {notes.length > 0 && (
+          {activeNotes.length > 0 && (
             <button
               onClick={handleClearAll}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer hover:bg-red-50 hover:border-red-200 transition-colors"
@@ -404,11 +435,11 @@ export default function App() {
         <div className="absolute inset-0" style={{ zIndex: 10 }}>
         <Whiteboard
           boardRef={whiteboardRef}
-          totalNotes={notes.length}
+          totalNotes={activeNotes.length}
           doneNotes={doneCount}
         >
           <AnimatePresence>
-            {notes.map((note) => (
+            {activeNotes.map((note) => (
               <StickyNote
                 key={note.id}
                 note={note}
@@ -417,6 +448,8 @@ export default function App() {
                 onToggleDone={handleToggleDone}
                 onPositionChange={handlePositionChange}
                 onInteract={bringToFront}
+                onArchive={handleArchive}
+                onEditRequest={handleEditRequest}
               />
             ))}
           </AnimatePresence>
@@ -432,12 +465,18 @@ export default function App() {
         timeLeft={formatTime(timeLeft)}
         onToggleTimer={toggleTimer}
         onSendBottle={handleSendBottle}
+        archivedCount={archivedNotes.length}
+        onOpenArchive={() => setShowArchiveModal(true)}
       />
 
       {/* ── New Note FAB ── */}
       {currentUser && (
         <div style={{ position: 'relative', zIndex: 35 }}>
-          <NewNoteButton onClick={() => setShowModal(true)} />
+          <NewNoteButton onClick={() => {
+            setEditingNote(null);
+            setShowModal(true);
+            playNewNoteSound();
+          }} />
         </div>
       )}
 
@@ -445,8 +484,10 @@ export default function App() {
       <AnimatePresence>
         {showModal && (
           <NewNoteModal
-            onClose={() => setShowModal(false)}
+            editNote={editingNote}
+            onClose={() => { setShowModal(false); setEditingNote(null); }}
             onAdd={handleAddNote}
+            onUpdate={handleUpdateNote}
           />
         )}
       </AnimatePresence>
@@ -465,6 +506,18 @@ export default function App() {
               setTimerState('idle');
               setTimeLeft(25 * 60);
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Archive Modal ── */}
+      <AnimatePresence>
+        {showArchiveModal && (
+          <ArchiveModal
+            archivedNotes={archivedNotes}
+            onClose={() => setShowArchiveModal(false)}
+            onRestore={handleRestoreNote}
+            onDeleteForever={handleDeleteArchived}
           />
         )}
       </AnimatePresence>

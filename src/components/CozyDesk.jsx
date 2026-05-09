@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import Fox from './Fox';
 import BottleCompanion from './BottleCompanion';
+import ArchiveChest from './ArchiveChest';
+import LofiRadio from './LofiRadio';
 
 // Coffee cup with steam animation
 function CoffeeCup({ isNight }) {
@@ -126,7 +128,7 @@ function DeskLamp({ isNight }) {
   );
 }
 
-export default function CozyDesk({ mascotState, timerMode, timeLeft, onToggleTimer, mood, onSendBottle }) {
+export default function CozyDesk({ mascotState, timerMode, timeLeft, onToggleTimer, mood, onSendBottle, archivedCount, onOpenArchive }) {
   const isNight = mood === 'magical';
 
   return (
@@ -168,14 +170,16 @@ export default function CozyDesk({ mascotState, timerMode, timeLeft, onToggleTim
             </div>
           </div>
 
-          {/* Right side: Coffee cup, Bottle, Note pad */}
-          <div className="flex items-end gap-3 md:gap-5">
+          {/* Right side: Coffee cup, Bottle, Archive Chest, Radio */}
+          <div className="flex items-end gap-3 md:gap-5" style={{ pointerEvents: 'auto' }}>
             <div className="hidden sm:block">
               <BottleCompanion onSend={onSendBottle} />
             </div>
             <CoffeeCup isNight={isNight} />
-            {/* Sticky note pad */}
-            <div className="rounded" style={{ width: 40, height: 40, background: '#fddb6d', border: '1px solid #f0c93a', boxShadow: '1px 2px 4px rgba(0,0,0,0.2)', transform: 'rotate(3deg)' }} />
+            {/* Archive Chest */}
+            <ArchiveChest archivedCount={archivedCount} onOpen={onOpenArchive} />
+            {/* Lofi Radio */}
+            <LofiRadio />
           </div>
         </div>
       </div>

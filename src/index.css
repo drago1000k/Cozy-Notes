@@ -290,6 +290,9 @@
     width: 95% !important;
     height: 48% !important;
     top: 5% !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Nav bar compact */

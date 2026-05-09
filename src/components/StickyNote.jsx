@@ -14,10 +14,13 @@ const NOTE_COLORS = [
   { bg: '#e0f2fe', border: '#38bdf8', shadow: 'rgba(56,189,248,0.28)' },
 ];
 
-export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone, onPositionChange, onInteract }) {
+export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone, onPositionChange, onInteract, onArchive, onEditRequest }) {
   const color = NOTE_COLORS[note.colorIndex % NOTE_COLORS.length];
   const [isDragging, setIsDragging] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const lastTapRef = useRef(0);
+  const hasDraggedRef = useRef(false);
 
   // Teal sea-glass styling for AI notes
   const isAi = note.isAi;
@@ -27,28 +30,62 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
     shadow: 'rgba(20, 184, 166, 0.4)'
   } : color;
 
+  // Double-tap detection
+  const handleBodyClick = (e) => {
+    if (isDragging || hasDraggedRef.current) return;
+    const now = Date.now();
+    if (now - lastTapRef.current < 350) {
+      e.stopPropagation();
+      if (onEditRequest) onEditRequest(note);
+    }
+    lastTapRef.current = now;
+  };
+
+  const BTN_SIZE = 20; // visual size; click area via padding
+
   return (
     <motion.div
-      drag
+      drag={!isArchiving}
       dragMomentum={false}
       dragConstraints={whiteboardRef}
       dragElastic={0.03}
       initial={{ x: note.x, y: note.y, scale: 0.6, opacity: 0, rotate: note.rotation }}
-      animate={{ x: note.x, y: note.y, scale: 1, opacity: 1, rotate: note.rotation }}
+      animate={isArchiving ? { scale: 0, opacity: 0 } : { x: note.x, y: note.y, scale: 1, opacity: 1, rotate: note.rotation }}
       exit={{ scale: 0.3, opacity: 0, transition: { duration: 0.18 } }}
       whileDrag={{ scale: 1.07 }}
       whileHover={{ scale: isDragging ? 1.07 : 1.02 }}
       onPointerDown={() => {
-        // Prevent interaction triggers if clicking specific action buttons
+        hasDraggedRef.current = false;
         if (onInteract) onInteract(note.id);
       }}
       onDragStart={() => {
         setIsDragging(true);
+        hasDraggedRef.current = true;
         dragOffset.current = { x: 0, y: 0 };
         playCrinkle();
       }}
       onDragEnd={(e, info) => {
         setIsDragging(false);
+        
+        // Check for archive drop
+        const chestZone = document.getElementById('archive-chest-zone');
+        if (chestZone && note.done) {
+          const rect = chestZone.getBoundingClientRect();
+          // Use pointer coordinates to check if dropped inside chest
+          if (
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom
+          ) {
+            setIsArchiving(true);
+            setTimeout(() => {
+              if (onArchive) onArchive(note.id);
+            }, 300); // Wait for shrink animation
+            return;
+          }
+        }
+
         onPositionChange(note.id, {
           x: note.x + info.offset.x,
           y: note.y + info.offset.y,
@@ -65,6 +102,7 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
         zIndex: isDragging ? 9999 : (note.zIndex || 10),
         userSelect: 'none',
         WebkitUserSelect: 'none',
+        touchAction: 'none', // Prevents scrolling while dragging
       }}
     >
       {/* Tape strip */}
@@ -137,11 +175,13 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
 
         {/* Text content */}
         <div
-          title={isAi ? "A message from afar" : ""}
+          onClick={handleBodyClick}
+          onTouchEnd={handleBodyClick}
+          title={isAi ? "A message from afar" : "Double-tap to edit"}
           dangerouslySetInnerHTML={{
-            __html: (/<[a-z][\s\S]*>/i.test(note.text || '')) 
-              ? (note.text || '') // Render HTML directly if it contains tags (from contentEditable)
-              : (note.text || '') // Legacy plain text or AI text fallback
+            __html: (new RegExp('<[a-z][\\s\\S]*>', 'i').test(note.text || '')) 
+              ? (note.text || '') 
+              : (note.text || '') 
                   .replace(/</g, '&lt;').replace(/>/g, '&gt;')
                   .replace(/\n/g, '<br/>')
                   .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
@@ -186,14 +226,15 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
               onClick={(e) => { e.stopPropagation(); onToggleDone(note.id); playScribble(); }}
               title={note.done ? 'Unmark' : 'Mark done'}
               style={{
-                width: 22, height: 22, borderRadius: '50%',
+                width: BTN_SIZE, height: BTN_SIZE, borderRadius: '50%',
                 border: `1.5px solid ${noteStyle.border}`,
                 background: note.done ? noteStyle.border : 'rgba(255,255,255,0.78)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', transition: 'background 0.18s',
+                padding: 0,
               }}
             >
-              <Check size={11} color={note.done ? 'white' : noteStyle.border} strokeWidth={3} />
+              <Check size={10} color={note.done ? 'white' : noteStyle.border} strokeWidth={3} />
             </motion.button>
 
             {/* Delete */}
@@ -204,13 +245,14 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
               onClick={(e) => { e.stopPropagation(); onDelete(note.id); playPop(); }}
               title="Delete note"
               style={{
-                width: 22, height: 22, borderRadius: '50%', border: '1.5px solid #f87171',
+                width: BTN_SIZE, height: BTN_SIZE, borderRadius: '50%', border: '1.5px solid #f87171',
                 background: 'rgba(255,255,255,0.78)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', transition: 'background 0.18s',
+                padding: 0,
               }}
             >
-              <X size={11} color="#f87171" strokeWidth={3} />
+              <X size={10} color="#f87171" strokeWidth={3} />
             </motion.button>
           </div>
         </div>
@@ -252,3 +294,4 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
     </motion.div>
   );
 }
+
