@@ -417,7 +417,7 @@ let newNoteSoundUrl = null;
 export function playNewNoteSound() {
   try {
     if (!newNoteSoundUrl) {
-      newNoteSoundUrl = new URL('../assets/Sounds/new-note.mp3', import.meta.url).href;
+      newNoteSoundUrl = new URL('../assets/sounds/new-note.mp3', import.meta.url).href;
     }
     const audio = new Audio(newNoteSoundUrl);
     audio.volume = 0.5;
