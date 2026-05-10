@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playGlassClink } from '../utils/audio';
 
 export default function BottleCompanion({ onSend }) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
+  
+  // Check if mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const handleSend = () => {
     if (message.trim()) {
@@ -13,6 +17,88 @@ export default function BottleCompanion({ onSend }) {
       setIsOpen(false);
     }
   };
+
+  // Popup Content extracted
+  const popupContent = (
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.9 }}
+      style={{
+        width: 200,
+        background: 'rgba(255,255,255,0.85)',
+        backdropFilter: 'blur(8px)',
+        padding: 12,
+        borderRadius: 12,
+        border: '1px solid rgba(20,184,166,0.3)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        // Handle desktop stacking context
+        position: 'relative',
+        zIndex: 50,
+      }}
+      onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+    >
+      <textarea
+        autoFocus
+        placeholder="Send a message..."
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
+        style={{
+          width: '100%',
+          height: 60,
+          resize: 'none',
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          fontFamily: "'Nunito', sans-serif",
+          fontSize: 13,
+          color: '#115e59',
+        }}
+      />
+      <div className="flex justify-end mt-2">
+        <button
+          onClick={handleSend}
+          disabled={!message.trim()}
+          style={{
+            background: message.trim() ? '#14b8a6' : '#99f6e4',
+            color: 'white',
+            border: 'none',
+            padding: '4px 10px',
+            borderRadius: 6,
+            fontSize: 12,
+            fontWeight: 'bold',
+            cursor: message.trim() ? 'pointer' : 'default',
+            transition: 'background 0.2s',
+          }}
+        >
+          Send
+        </button>
+      </div>
+      
+      {/* Arrow pointing down (Only show on desktop, doesn't make sense centered on mobile) */}
+      {!isMobile && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: -6,
+            left: '50%',
+            transform: 'translateX(-50%) rotate(45deg)',
+            width: 12,
+            height: 12,
+            background: 'rgba(255,255,255,0.85)',
+            borderRight: '1px solid rgba(20,184,166,0.3)',
+            borderBottom: '1px solid rgba(20,184,166,0.3)',
+          }}
+        />
+      )}
+    </motion.div>
+  );
 
   return (
     <div className="relative flex flex-col items-center">
@@ -42,82 +128,25 @@ export default function BottleCompanion({ onSend }) {
         <div style={{ position: 'absolute', top: 18, left: 8, width: 8, height: 16, background: '#fff9c4', borderRadius: 2, transform: 'rotate(5deg)' }} />
       </motion.div>
 
-      {/* Popover Input */}
+      {/* Render Popup via Portal on Mobile, inline on Desktop */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-            className="absolute bottom-full mb-3"
-            style={{
-              width: 200,
-              background: 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(8px)',
-              padding: 12,
-              borderRadius: 12,
-              border: '1px solid rgba(20,184,166,0.3)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              zIndex: 50,
-            }}
-          >
-            <textarea
-              autoFocus
-              placeholder="Send a message..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              style={{
-                width: '100%',
-                height: 60,
-                resize: 'none',
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                fontFamily: "'Nunito', sans-serif",
-                fontSize: 13,
-                color: '#115e59',
-              }}
-            />
-            <div className="flex justify-end mt-2">
-              <button
-                onClick={handleSend}
-                disabled={!message.trim()}
-                style={{
-                  background: message.trim() ? '#14b8a6' : '#99f6e4',
-                  color: 'white',
-                  border: 'none',
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontWeight: 'bold',
-                  cursor: message.trim() ? 'pointer' : 'default',
-                  transition: 'background 0.2s',
-                }}
-              >
-                Send
-              </button>
+          isMobile ? createPortal(
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              onClick={() => setIsOpen(false)}
+            >
+              {popupContent}
+            </motion.div>,
+            document.body
+          ) : (
+            <div className="absolute z-50 mb-3" style={{ bottom: '100%' }}>
+              {popupContent}
             </div>
-            {/* Arrow pointing down */}
-            <div
-              style={{
-                position: 'absolute',
-                bottom: -6,
-                left: '50%',
-                transform: 'translateX(-50%) rotate(45deg)',
-                width: 12,
-                height: 12,
-                background: 'rgba(255,255,255,0.85)',
-                borderRight: '1px solid rgba(20,184,166,0.3)',
-                borderBottom: '1px solid rgba(20,184,166,0.3)',
-              }}
-            />
-          </motion.div>
+          )
         )}
       </AnimatePresence>
     </div>
