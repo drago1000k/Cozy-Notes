@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playGlassClink } from '../utils/audio';
@@ -6,9 +6,15 @@ import { playGlassClink } from '../utils/audio';
 export default function BottleCompanion({ onSend }) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
-  
-  // Check if mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // Thêm logic nhận diện Mobile
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleSend = () => {
     if (message.trim()) {
@@ -18,12 +24,13 @@ export default function BottleCompanion({ onSend }) {
     }
   };
 
-  // Popup Content extracted
+  // Tách giao diện Popup ra một biến riêng
   const popupContent = (
     <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.9 }}
+      className={isMobile ? "relative" : "absolute bottom-full mb-3"}
       style={{
         width: 200,
         background: 'rgba(255,255,255,0.85)',
@@ -32,11 +39,9 @@ export default function BottleCompanion({ onSend }) {
         borderRadius: 12,
         border: '1px solid rgba(20,184,166,0.3)',
         boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        // Handle desktop stacking context
-        position: 'relative',
         zIndex: 50,
       }}
-      onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+      onClick={(e) => e.stopPropagation()} // Ngăn click xuyên qua làm đóng popup
     >
       <textarea
         autoFocus
@@ -80,8 +85,7 @@ export default function BottleCompanion({ onSend }) {
           Send
         </button>
       </div>
-      
-      {/* Arrow pointing down (Only show on desktop, doesn't make sense centered on mobile) */}
+      {/* Arrow pointing down (Ẩn đi trên mobile vì popup nằm giữa màn hình) */}
       {!isMobile && (
         <div
           style={{
@@ -132,21 +136,11 @@ export default function BottleCompanion({ onSend }) {
       <AnimatePresence>
         {isOpen && (
           isMobile ? createPortal(
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-              onClick={() => setIsOpen(false)}
-            >
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}>
               {popupContent}
-            </motion.div>,
+            </div>,
             document.body
-          ) : (
-            <div className="absolute z-50 mb-3" style={{ bottom: '100%' }}>
-              {popupContent}
-            </div>
-          )
+          ) : popupContent
         )}
       </AnimatePresence>
     </div>

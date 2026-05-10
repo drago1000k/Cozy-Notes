@@ -11,54 +11,84 @@ export default function LofiRadio() {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [volume, setVolume] = useState(0.5);
   
-  const audioRef = useRef(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   
-  // Check if it is mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const audioRef = useRef(null);
+  const radioRef = useRef(null);
+
+  // Thêm logic nhận diện Mobile
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleToggleRadio = () => setIsOpen(prev => !prev);
-
   const currentChannel = TRACKS.find(t => t.id === currentChannelId) || TRACKS[0];
   const currentTrack = currentChannel.files[currentTrackIndex];
 
+  // Close overlay on outside click
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
+    const handleClickOutside = (event) => {
+      if (radioRef.current && !radioRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  // Adjust volume
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
 
-  // When track changes, play if it was already playing
+  // Automatically play the next track when currentTrack changes
   useEffect(() => {
     if (audioRef.current && isPlaying) {
-      audioRef.current.play().catch(e => {
-        console.debug('Autoplay prevented', e);
-        setIsPlaying(false);
-      });
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => {
+          console.debug('Autoplay prevented on track change', e);
+          setIsPlaying(false);
+        });
+      }
     }
-  }, [currentTrack, isPlaying]);
+  }, [currentTrack, isPlaying]); // Trigger only when the track changes
 
+  // Handle play/pause toggle securely
   const handleTogglePlay = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
-      setIsPlaying(false);
+      // setIsPlaying(false) will be naturally handled by the onPause native event
     } else {
-      audioRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch(e => console.debug('Play prevented', e));
+      audioRef.current.play().catch(e => console.debug('Play prevented', e));
+      // setIsPlaying(true) will be naturally handled by the onPlay native event
     }
   };
 
+  // Skip forward, loops back to index 0 naturally
   const handleNext = () => {
-    setCurrentTrackIndex((prev) => (prev + 1) % currentChannel.files.length);
+    if (currentChannel.files.length > 0) {
+      setCurrentTrackIndex((prev) => (prev + 1) % currentChannel.files.length);
+    }
   };
 
+  // Skip backward
   const handlePrev = () => {
-    setCurrentTrackIndex((prev) => (prev - 1 + currentChannel.files.length) % currentChannel.files.length);
+    if (currentChannel.files.length > 0) {
+      setCurrentTrackIndex((prev) => (prev - 1 + currentChannel.files.length) % currentChannel.files.length);
+    }
   };
 
+  // Called natively when track naturally ends
   const handleTrackEnded = () => {
     handleNext();
+    setIsPlaying(true); // Force state to remain playing for the next song
   };
 
   const handleChannelSelect = (channelId) => {
@@ -66,24 +96,35 @@ export default function LofiRadio() {
     setCurrentTrackIndex(0);
   };
 
-  // Popup Content extracted so we can render it in Portal or directly
+  const handleSeek = (e) => {
+    const time = parseFloat(e.target.value);
+    setCurrentTime(time);
+    if (audioRef.current) audioRef.current.currentTime = time;
+  };
+
+  const formatTime = (secs) => {
+    if (isNaN(secs)) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  // Tách giao diện Popup ra một biến riêng để dễ đưa vào Portal
   const popupContent = (
     <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.9 }}
-      className="shadow-2xl overflow-hidden flex flex-col"
+      className={`${isMobile ? 'relative' : 'absolute'} rounded-xl shadow-2xl overflow-hidden flex flex-col`}
       style={{
+        ...(isMobile ? {} : { bottom: 60, right: -60 }),
         width: 280, height: 380,
         background: 'linear-gradient(160deg, #fef7ed 0%, #fde6c4 100%)',
         border: '2px solid #c4956a',
-        borderRadius: 12,
-        // zIndex handles local stacking on desktop
         zIndex: 50,
       }}
-      onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+      onClick={(e) => e.stopPropagation()}
     >
-      {/* Header: Channel Selector */}
       <div className="flex bg-[#e0be9c] p-1 border-b border-[#c4956a]">
         {TRACKS.map(channel => (
           <button
@@ -101,7 +142,6 @@ export default function LofiRadio() {
         ))}
       </div>
 
-      {/* Now Playing Area */}
       <div className="flex flex-col items-center p-4 border-b border-[#e0be9c] bg-[rgba(255,255,255,0.4)]">
         <div className="w-12 h-12 rounded-full bg-[#f5c97a] mb-2 flex items-center justify-center text-2xl shadow-inner border border-[#d4a574]">
           {currentChannel.emoji}
@@ -113,7 +153,6 @@ export default function LofiRadio() {
           {isPlaying ? '♪ Playing...' : 'Paused'}
         </p>
 
-        {/* Controls */}
         <div className="flex items-center gap-4">
           <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={handlePrev} className="p-2 rounded-full bg-[#e0be9c] text-[#5a311b] cursor-pointer">
             <SkipBack size={16} />
@@ -125,9 +164,26 @@ export default function LofiRadio() {
             <SkipForward size={16} />
           </motion.button>
         </div>
+
+        <div className="w-full flex items-center gap-2 mt-3 px-2">
+          <span className="text-[10px] text-[#a0714f] font-['Nunito'] w-6 text-right">
+            {formatTime(currentTime)}
+          </span>
+          <input
+            type="range"
+            min="0"
+            max={duration || 100}
+            value={currentTime}
+            onChange={handleSeek}
+            className="flex-1 h-1.5 bg-[#c4956a] rounded-lg appearance-none cursor-pointer"
+            style={{ accentColor: '#e06d41' }}
+          />
+          <span className="text-[10px] text-[#a0714f] font-['Nunito'] w-6">
+            {formatTime(duration)}
+          </span>
+        </div>
       </div>
 
-      {/* Playlist */}
       <div className="flex-1 overflow-y-auto p-2">
         {currentChannel.files.map((file, idx) => (
           <div
@@ -157,7 +213,6 @@ export default function LofiRadio() {
         ))}
       </div>
 
-      {/* Volume */}
       <div className="flex items-center gap-2 p-3 bg-[#e0be9c] border-t border-[#c4956a]">
         <Volume2 size={16} color="#6d4a30" />
         <input
@@ -172,8 +227,7 @@ export default function LofiRadio() {
   );
 
   return (
-    <div className="relative" style={{ width: 44, height: 52 }}>
-      {/* Hidden Audio Element */}
+    <div className="relative" style={{ width: 44, height: 52 }} ref={radioRef}>
       {currentTrack && (
         <audio
           ref={audioRef}
@@ -181,8 +235,12 @@ export default function LofiRadio() {
           onEnded={handleTrackEnded}
           onPlay={() => setIsPlaying(true)}
           onPause={(e) => {
-            if (!e.target.ended) setIsPlaying(false);
+            if (!e.target.ended) {
+              setIsPlaying(false);
+            }
           }}
+          onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+          onLoadedMetadata={(e) => setDuration(e.target.duration)}
         />
       )}
 
@@ -195,7 +253,6 @@ export default function LofiRadio() {
         title="Lofi Radio"
         style={{ width: 44, height: 52, zIndex: 10 }}
       >
-        {/* Antenna */}
         <motion.div
           className="absolute"
           style={{ width: 2, height: 18, top: -14, left: 20, background: '#4a5568', borderRadius: 1, transformOrigin: 'bottom center' }}
@@ -203,15 +260,12 @@ export default function LofiRadio() {
           transition={isPlaying ? { repeat: Infinity, duration: 2, ease: 'easeInOut' } : {}}
         />
         <div className="absolute rounded-full" style={{ width: 5, height: 5, top: -17, left: 18.5, background: isPlaying ? '#f59e0b' : '#94a3b8' }} />
-
-        {/* Radio box */}
         <div className="absolute rounded-lg" style={{
           width: 44, height: 38, bottom: 0, left: 0,
           background: 'linear-gradient(160deg, #8b6347 0%, #6d4a30 100%)',
           border: '2px solid #5a3820',
           boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
         }}>
-          {/* Speaker grille */}
           <div className="absolute rounded-full" style={{
             width: 20, height: 20, top: 4, left: 4,
             background: 'radial-gradient(circle, #3d2b1f 40%, #5a3820 100%)',
@@ -224,10 +278,8 @@ export default function LofiRadio() {
               }} />
             ))}
           </div>
-          {/* Knobs */}
           <div className="absolute rounded-full" style={{ width: 8, height: 8, top: 5, right: 6, background: '#f59e0b', border: '1px solid #d97706' }} />
           <div className="absolute rounded-full" style={{ width: 6, height: 6, top: 16, right: 7, background: '#94a3b8', border: '1px solid #64748b' }} />
-          {/* LED */}
           <motion.div
             className="absolute rounded-full"
             style={{ width: 4, height: 4, bottom: 5, right: 7 }}
@@ -235,8 +287,6 @@ export default function LofiRadio() {
             transition={isPlaying ? { repeat: Infinity, duration: 1.5 } : {}}
           />
         </div>
-
-        {/* Feet */}
         <div className="absolute rounded-b" style={{ width: 6, height: 4, bottom: -2, left: 6, background: '#3d2b1f' }} />
         <div className="absolute rounded-b" style={{ width: 6, height: 4, bottom: -2, right: 6, background: '#3d2b1f' }} />
       </motion.div>
@@ -245,21 +295,11 @@ export default function LofiRadio() {
       <AnimatePresence>
         {isOpen && (
           isMobile ? createPortal(
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-              onClick={() => setIsOpen(false)}
-            >
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}>
               {popupContent}
-            </motion.div>,
+            </div>,
             document.body
-          ) : (
-            <div className="absolute z-50" style={{ bottom: 60, right: -60 }}>
-              {popupContent}
-            </div>
-          )
+          ) : popupContent
         )}
       </AnimatePresence>
     </div>
