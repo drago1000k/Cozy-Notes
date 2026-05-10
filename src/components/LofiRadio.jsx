@@ -17,7 +17,7 @@ export default function LofiRadio() {
   const audioRef = useRef(null);
   const radioRef = useRef(null);
 
-  // Nhận diện Mobile
+  // Check if it is mobile
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -33,7 +33,7 @@ export default function LofiRadio() {
   // Close overlay on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isMobile) return; // Trên mobile, click ra ngoài đã được xử lý bởi lớp nền mờ
+      if (isMobile) return; 
       if (radioRef.current && !radioRef.current.contains(event.target)) {
         setIsOpen(false);
       }
@@ -105,7 +105,7 @@ export default function LofiRadio() {
     return `${m}:${s}`;
   };
 
-  // Tách riêng nội dung Popup để tái sử dụng
+  // Popup Content extracted
   const popupContent = (
     <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.9 }}
@@ -115,12 +115,13 @@ export default function LofiRadio() {
       style={{
         bottom: isMobile ? 'auto' : 60,
         right: isMobile ? 'auto' : -60,
-        width: 280, height: 380,
+        width: 280, 
+        height: isMobile ? 335 : 380, // Shrink height on mobile since we remove the volume bar
         background: 'linear-gradient(160deg, #fef7ed 0%, #fde6c4 100%)',
         border: '2px solid #c4956a',
         zIndex: 50,
       }}
-      onClick={(e) => e.stopPropagation()} // Ngăn click xuyên xuống lớp nền
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="flex bg-[#e0be9c] p-1 border-b border-[#c4956a]">
         {TRACKS.map(channel => (
@@ -210,22 +211,24 @@ export default function LofiRadio() {
         ))}
       </div>
 
-      <div className="flex items-center gap-2 p-3 bg-[#e0be9c] border-t border-[#c4956a]">
-        <Volume2 size={16} color="#6d4a30" />
-        <input
-          type="range" min="0" max="1" step="0.05"
-          value={volume}
-          onChange={(e) => setVolume(parseFloat(e.target.value))}
-          className="flex-1 h-1.5 bg-[#c4956a] rounded-lg appearance-none cursor-pointer"
-          style={{ accentColor: '#e06d41' }}
-        />
-      </div>
+      {/* Hide volume control on mobile entirely because the OS ignores JS volume manipulation */}
+      {!isMobile && (
+        <div className="flex items-center gap-2 p-3 bg-[#e0be9c] border-t border-[#c4956a]">
+          <Volume2 size={16} color="#6d4a30" />
+          <input
+            type="range" min="0" max="1" step="0.05"
+            value={volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="flex-1 h-1.5 bg-[#c4956a] rounded-lg appearance-none cursor-pointer"
+            style={{ accentColor: '#e06d41' }}
+          />
+        </div>
+      )}
     </motion.div>
   );
 
   return (
     <div className="relative" style={{ width: 44, height: 52 }} ref={radioRef}>
-      {/* Hidden Audio Element */}
       {currentTrack && (
         <audio
           ref={audioRef}
@@ -289,7 +292,7 @@ export default function LofiRadio() {
         <div className="absolute rounded-b" style={{ width: 6, height: 4, bottom: -2, right: 6, background: '#3d2b1f' }} />
       </motion.div>
 
-      {/* CHỖ FIX LỖI: AnimatePresence phải nằm BÊN TRONG/HOẶC NGANG HÀNG Portal */}
+      {/* Portal */}
       {isMobile ? (
         typeof document !== 'undefined' && createPortal(
           <AnimatePresence>
@@ -303,7 +306,7 @@ export default function LofiRadio() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
                 }}
-                onClick={() => setIsOpen(false)} // Click ra ngoài nền đen để đóng
+                onClick={() => setIsOpen(false)}
               >
                 {popupContent}
               </motion.div>
