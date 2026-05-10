@@ -10,12 +10,32 @@ export default function LofiRadio() {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [volume, setVolume] = useState(0.5);
   
+  // State quản lý thời gian
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  
   const audioRef = useRef(null);
+  const radioRef = useRef(null); // Ref để bắt click outside
 
   const handleToggleRadio = () => setIsOpen(prev => !prev);
 
   const currentChannel = TRACKS.find(t => t.id === currentChannelId) || TRACKS[0];
   const currentTrack = currentChannel.files[currentTrackIndex];
+
+  // Xử lý click ra ngoài để đóng Popup
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (radioRef.current && !radioRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -47,7 +67,6 @@ export default function LofiRadio() {
 
   const handleNext = () => {
     setCurrentTrackIndex((prev) => (prev + 1) % currentChannel.files.length);
-    // isPlaying remains true, the useEffect will trigger play
   };
 
   const handlePrev = () => {
@@ -63,8 +82,24 @@ export default function LofiRadio() {
     setCurrentTrackIndex(0);
   };
 
+  // Logic tua nhạc
+  const handleSeek = (e) => {
+    const time = parseFloat(e.target.value);
+    setCurrentTime(time);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+  };
+
+  const formatTime = (secs) => {
+    if (isNaN(secs)) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   return (
-    <div className="relative" style={{ width: 44, height: 52 }}>
+    <div className="relative" style={{ width: 44, height: 52 }} ref={radioRef}>
       {/* Hidden Audio Element */}
       {currentTrack && (
         <audio
@@ -73,6 +108,8 @@ export default function LofiRadio() {
           onEnded={handleTrackEnded}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
+          onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+          onLoadedMetadata={(e) => setDuration(e.target.duration)}
         />
       )}
 
@@ -188,6 +225,25 @@ export default function LofiRadio() {
                 <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={handleNext} className="p-2 rounded-full bg-[#e0be9c] text-[#5a311b] cursor-pointer">
                   <SkipForward size={16} />
                 </motion.button>
+              </div>
+
+              {/* Thanh tua nhạc (Seek bar) */}
+              <div className="w-full flex items-center gap-2 mt-3 px-2">
+                <span className="text-[10px] text-[#a0714f] font-['Nunito'] w-6 text-right">
+                  {formatTime(currentTime)}
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 100}
+                  value={currentTime}
+                  onChange={handleSeek}
+                  className="flex-1 h-1.5 bg-[#c4956a] rounded-lg appearance-none cursor-pointer"
+                  style={{ accentColor: '#e06d41' }}
+                />
+                <span className="text-[10px] text-[#a0714f] font-['Nunito'] w-6">
+                  {formatTime(duration)}
+                </span>
               </div>
             </div>
 

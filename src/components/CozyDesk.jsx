@@ -151,16 +151,19 @@ export default function CozyDesk({ mascotState, timerMode, timeLeft, onToggleTim
 
         {/* Items on desk */}
         <div className="relative w-full flex justify-between items-end px-10 md:px-16 pointer-events-auto" style={{ paddingBottom: 82 }}>
-          {/* Left side: plant + books + lamp */}
+          
+          {/* TRÁI: Đèn + Cây + Sách + Archive Chest (MỚI CHUYỂN QUA) */}
           <div className="flex items-end gap-2 md:gap-4">
             <DeskLamp isNight={isNight} />
             <PlantPot />
             <div className="hidden sm:block">
               <Books />
             </div>
+            {/* Archive Chest giờ nằm cạnh chồng sách */}
+            <ArchiveChest archivedCount={archivedCount} onOpen={onOpenArchive} />
           </div>
 
-          {/* Center: Fox + Laptop */}
+          {/* GIỮA: Cáo + Laptop */}
           <div className="flex flex-col items-center gap-0">
             <motion.div className="animate-float" style={{ transformOrigin: 'bottom center' }}>
               <Fox mascotState={mascotState} mood={mood} />
@@ -170,17 +173,16 @@ export default function CozyDesk({ mascotState, timerMode, timeLeft, onToggleTim
             </div>
           </div>
 
-          {/* Right side: Coffee cup, Bottle, Archive Chest, Radio */}
+          {/* PHẢI: Bình sữa, Ly cà phê, Lofi Radio */}
           <div className="flex items-end gap-3 md:gap-5" style={{ pointerEvents: 'auto' }}>
             <div className="hidden sm:block">
               <BottleCompanion onSend={onSendBottle} />
             </div>
             <CoffeeCup isNight={isNight} />
-            {/* Archive Chest */}
-            <ArchiveChest archivedCount={archivedCount} onOpen={onOpenArchive} />
-            {/* Lofi Radio */}
+            {/* Lofi Radio giờ nằm sát bên phải */}
             <LofiRadio />
           </div>
+          
         </div>
       </div>
     </div>

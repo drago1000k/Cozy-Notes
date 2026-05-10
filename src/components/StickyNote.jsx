@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState, useRef } from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, Archive } from 'lucide-react';
 import { playCrinkle, playPop, playScribble } from '../utils/audio';
 
 const NOTE_COLORS = [
@@ -157,6 +157,9 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
         {/* Title Header */}
         {(note.title || isAi) && (
           <div
+            onClick={handleBodyClick}
+            onTouchEnd={handleBodyClick}
+            title={isAi ? "A message from afar" : "Double-tap to edit"}
             style={{
               fontFamily: "'Patrick Hand', cursive",
               fontSize: 19,
@@ -218,6 +221,28 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
           </span>
 
           <div style={{ display: 'flex', gap: 4 }}>
+            {/* Nút Archive chỉ hiện khi note đã Done */}
+            {note.done && (
+              <motion.button
+                whileHover={{ scale: 1.18, background: '#fef3c7' }}
+                whileTap={{ scale: 0.88 }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setIsArchiving(true);
+                  setTimeout(() => { if (onArchive) onArchive(note.id); }, 300);
+                }}
+                title="Move to Archive"
+                style={{
+                  width: BTN_SIZE, height: BTN_SIZE, borderRadius: '50%', border: `1.5px solid #d97706`,
+                  background: 'rgba(255,255,255,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'background 0.18s', padding: 0,
+                }}
+              >
+                <Archive size={10} color="#d97706" strokeWidth={3} />
+              </motion.button>
+            )}
+
             {/* Check */}
             <motion.button
               whileHover={{ scale: 1.18 }}
@@ -294,4 +319,3 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
     </motion.div>
   );
 }
-

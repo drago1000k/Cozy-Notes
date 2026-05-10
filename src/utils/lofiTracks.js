@@ -1,4 +1,4 @@
-const musicFiles = import.meta.glob('../assets/Musics/**/*.mp3', { as: 'url', eager: true });
+const musicFiles = import.meta.glob('../assets/Musics/**/*.mp3', { eager: true }); // Bỏ { as: 'url' } đi
 
 export const TRACKS = [
   {
@@ -22,9 +22,8 @@ export const TRACKS = [
 ];
 
 // Group files by their parent folder
-for (const [path, url] of Object.entries(musicFiles)) {
+for (const [path, moduleObj] of Object.entries(musicFiles)) {
   const parts = path.split('/');
-  // path looks like "../assets/musics/Rainy_Night/song.mp3"
   const folder = parts[parts.length - 2];
   const filename = parts[parts.length - 1].replace('.mp3', '');
   
@@ -32,7 +31,8 @@ for (const [path, url] of Object.entries(musicFiles)) {
   if (channel) {
     channel.files.push({
       name: filename,
-      url: url
+      // ĐÂY LÀ CHỖ QUAN TRỌNG NHẤT: Lấy moduleObj.default nếu nó là object, còn không thì lấy chính nó
+      url: moduleObj.default || moduleObj 
     });
   }
 }
