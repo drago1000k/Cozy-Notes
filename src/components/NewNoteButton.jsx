@@ -2,6 +2,9 @@ import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 
 export default function NewNoteButton({ onClick }) {
+  // Check if the screen is mobile size on render
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
     <motion.button
       onClick={onClick}
@@ -12,8 +15,9 @@ export default function NewNoteButton({ onClick }) {
       whileTap={{ scale: 0.95 }}
       className="fixed z-40 flex flex-col items-center gap-2"
       style={{
-        bottom: 32,
-        right: 32,
+        // CRITICAL FIX: Desktop stays exactly at 32px. Only Mobile moves up to 140px.
+        bottom: isMobile ? 140 : 32,
+        right: isMobile ? 20 : 32,
         cursor: 'pointer',
         border: 'none',
         background: 'transparent',
