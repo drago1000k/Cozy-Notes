@@ -221,7 +221,7 @@ export default function StickyNote({ note, whiteboardRef, onDelete, onToggleDone
           </span>
 
           <div style={{ display: 'flex', gap: 4 }}>
-            {/* Nút Archive chỉ hiện khi note đã Done */}
+            {/* Archive button only shown when notes are Done */}
             {note.done && (
               <motion.button
                 whileHover={{ scale: 1.18, background: '#fef3c7' }}

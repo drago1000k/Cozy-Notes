@@ -31,7 +31,6 @@ for (const [path, moduleObj] of Object.entries(musicFiles)) {
   if (channel) {
     channel.files.push({
       name: filename,
-      // ĐÂY LÀ CHỖ QUAN TRỌNG NHẤT: Lấy moduleObj.default nếu nó là object, còn không thì lấy chính nó
       url: moduleObj.default || moduleObj 
     });
   }
