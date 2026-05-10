@@ -4,79 +4,58 @@ import { ZoomIn, ZoomOut, RefreshCcw } from 'lucide-react';
 export default function Whiteboard({ boardRef, viewportRef, scale, setScale, totalNotes, doneNotes, children }) {
   const progress = totalNotes > 0 ? Math.round((doneNotes / totalNotes) * 100) : 0;
 
-  // Reusable zoom button styling
-  const btnStyle = {
-    width: 36, height: 36, borderRadius: '50%',
-    background: 'rgba(255,255,255,0.88)',
-    border: '1.5px solid rgba(196,149,106,0.4)',
-    color: '#6d4a30', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', backdropFilter: 'blur(4px)'
-  };
+  // Responsive button styling: smaller on mobile, normal on desktop
+  const btnStyle = "w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/90 border-2 border-[#c4956a]/40 text-[#6d4a30] flex items-center justify-center cursor-pointer shadow-sm backdrop-blur-sm";
 
   return (
     <div
-      className="whiteboard-frame"
+      // Mobile: 95% width, smaller top margin. Desktop (md): 78% width, 7% top margin
+      className="fixed left-1/2 -translate-x-1/2 w-[95%] md:w-[78%] max-w-[1020px] top-[75px] md:top-[7%] h-[50%] md:h-[56%] rounded-xl z-10 overflow-hidden"
       style={{
-        position: 'fixed', top: '7%', left: '50%', transform: 'translateX(-50%)',
-        width: '78%', maxWidth: 1020, height: '56%',
-        borderRadius: 10, border: '14px solid #c4956a',
+        border: typeof window !== 'undefined' && window.innerWidth < 768 ? '8px solid #c4956a' : '14px solid #c4956a',
         boxShadow: `inset 0 0 28px rgba(0,0,0,0.04), 0 8px 32px rgba(74,55,40,0.25), 0 2px 6px rgba(74,55,40,0.1)`,
-        background: '#faf7f2', overflow: 'hidden', zIndex: 5,
+        background: '#faf7f2',
+        backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(200,185,160,0.13) 30px, rgba(200,185,160,0.13) 31px)`,
       }}
     >
       {/* Corner screws */}
       {[
-        { top: -11, left: -11 }, { top: -11, right: -11 },
-        { bottom: -11, left: -11 }, { bottom: -11, right: -11 },
+        { top: -8, left: -8 }, { top: -8, right: -8 },
+        { bottom: -8, left: -8 }, { bottom: -8, right: -8 },
       ].map((pos, i) => (
         <div
           key={i}
-          style={{
-            position: 'absolute', width: 12, height: 12, borderRadius: '50%', zIndex: 20,
-            background: 'radial-gradient(circle at 35% 35%, #e8c898 0%, #a07040 60%, #6d4a25 100%)',
-            border: '1px solid #5a3820', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3)', ...pos,
-          }}
+          className="absolute w-2.5 h-2.5 md:w-3 md:h-3 rounded-full z-20 border border-[#5a3820] shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]"
+          style={{ background: 'radial-gradient(circle at 35% 35%, #e8c898 0%, #a07040 60%, #6d4a25 100%)', ...pos }}
         />
       ))}
 
-      {/* Header bar (Static/Fixed) */}
-      <div
-        style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 44,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 16px', background: 'rgba(245,237,224,0.88)',
-          borderBottom: '1px solid rgba(196,149,106,0.28)', backdropFilter: 'blur(4px)', zIndex: 10,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18 }}>📋</span>
-          <span style={{ fontFamily: "'Patrick Hand', cursive", fontWeight: 700, fontSize: 19, color: '#6d4a30' }}>
+      {/* Header bar */}
+      <div className="absolute top-0 left-0 right-0 h-10 md:h-11 flex items-center justify-between px-2 md:px-4 bg-[#f5ede0]/90 border-b border-[#c4956a]/30 backdrop-blur-sm z-20">
+        <div className="flex items-center gap-1.5 md:gap-2">
+          <span className="text-base md:text-lg">📋</span>
+          <span className="font-['Patrick_Hand'] font-bold text-base md:text-[19px] text-[#6d4a30]">
             My Cozy Board
           </span>
         </div>
 
         {totalNotes > 0 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#a0714f', fontFamily: 'Nunito, sans-serif', minWidth: 72, textAlign: 'right' }}>
-              {doneNotes}/{totalNotes} done
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-1.5 md:gap-2">
+            <span className="text-[10px] md:text-xs font-semibold text-[#a0714f] font-['Nunito'] text-right min-w-[50px] md:min-w-[72px]">
+              {doneNotes}/{totalNotes} <span className="hidden md:inline">done</span>
             </span>
-            <div style={{ width: 80, height: 8, borderRadius: 99, background: 'rgba(196,149,106,0.2)', overflow: 'hidden' }}>
+            <div className="w-12 md:w-20 h-1.5 md:h-2 rounded-full bg-[#c4956a]/20 overflow-hidden">
               <motion.div
                 animate={{ width: `${progress}%` }} transition={{ type: 'spring', stiffness: 200 }}
-                style={{
-                  height: '100%', borderRadius: 99,
-                  background: progress === 100 ? 'linear-gradient(90deg, #68d391, #38a169)' : 'linear-gradient(90deg, #f59e0b, #f97316)',
-                }}
+                className="h-full rounded-full"
+                style={{ background: progress === 100 ? 'linear-gradient(90deg, #68d391, #38a169)' : 'linear-gradient(90deg, #f59e0b, #f97316)' }}
               />
             </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: progress === 100 ? '#38a169' : '#a0714f', fontFamily: 'Nunito, sans-serif', minWidth: 28 }}>
+            <span className={`text-[10px] md:text-[11px] font-bold font-['Nunito'] min-w-[24px] md:min-w-[28px] ${progress === 100 ? 'text-[#38a169]' : 'text-[#a0714f]'}`}>
               {progress}%
             </span>
             {progress === 100 && (
-              <motion.span initial={{ scale: 0 }} animate={{ scale: 1, rotate: [0, -10, 10, 0] }} style={{ fontSize: 18 }}>
+              <motion.span initial={{ scale: 0 }} animate={{ scale: 1, rotate: [0, -10, 10, 0] }} className="text-sm md:text-lg">
                 🎉
               </motion.span>
             )}
@@ -84,22 +63,18 @@ export default function Whiteboard({ boardRef, viewportRef, scale, setScale, tot
         )}
       </div>
 
-      {/* ── Scrollable Viewport for Native Panning ── */}
+      {/* Scrollable Viewport for Native Panning */}
       <div
         ref={viewportRef}
         style={{
-          position: 'absolute', top: 44, left: 0, right: 0, bottom: 0,
+          position: 'absolute', top: 40, left: 0, right: 0, bottom: 0,
           overflow: 'auto', WebkitOverflowScrolling: 'touch', // Smooth momentum scroll for iOS
         }}
       >
-        {/* The large zoomable canvas holding all sticky notes */}
         <motion.div
           ref={boardRef}
           style={{
-            position: 'relative',
-            width: 2500, height: 1500, // Massive canvas size
-            scale: scale,
-            transformOrigin: '0 0',
+            position: 'relative', width: 2500, height: 1500, scale: scale, transformOrigin: '0 0',
             backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(200,185,160,0.13) 30px, rgba(200,185,160,0.13) 31px)`,
           }}
         >
@@ -111,51 +86,35 @@ export default function Whiteboard({ boardRef, viewportRef, scale, setScale, tot
       {totalNotes === 0 && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-          style={{
-            position: 'absolute', top: 44, left: 0, right: 0, bottom: 0,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            pointerEvents: 'none', zIndex: 1,
-          }}
+          className="absolute inset-0 top-10 flex flex-col items-center justify-center pointer-events-none z-[1]"
         >
           <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}>
-            <span style={{ fontSize: 50 }}>📌</span>
+            <span className="text-4xl md:text-5xl">📌</span>
           </motion.div>
-          <p style={{ fontFamily: "'Caveat', cursive", fontWeight: 700, fontSize: 22, color: '#c4a882', margin: '12px 0 4px' }}>
+          <p className="font-['Caveat'] font-bold text-xl md:text-2xl text-[#c4a882] mt-3 mb-1">
             Your board is empty...
           </p>
-          <p style={{ fontFamily: "'Caveat', cursive", fontSize: 17, color: '#d4bea0', margin: 0 }}>
+          <p className="font-['Caveat'] text-base md:text-lg text-[#d4bea0] m-0">
             Create a note and pin it here! ✨
           </p>
         </motion.div>
       )}
 
-      {/* Floating Zoom Controls Container */}
-      <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 20 }}>
-        <motion.button 
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} 
-          onClick={() => setScale(s => Math.min(s + 0.15, 2))} 
-          style={btnStyle} title="Zoom In"
-        >
-          <ZoomIn size={18} />
+      {/* Floating Zoom Controls - Responsive Layout (Horizontal on mobile, Vertical on desktop) */}
+      <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 flex flex-row md:flex-col gap-1.5 md:gap-2 z-30">
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={() => setScale(s => Math.min(s + 0.15, 2))} className={btnStyle} title="Zoom In">
+          <ZoomIn size={16} />
         </motion.button>
-        <motion.button 
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} 
-          onClick={() => setScale(s => Math.max(s - 0.15, 0.4))} 
-          style={btnStyle} title="Zoom Out"
-        >
-          <ZoomOut size={18} />
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={() => setScale(s => Math.max(s - 0.15, 0.4))} className={btnStyle} title="Zoom Out">
+          <ZoomOut size={16} />
         </motion.button>
-        <motion.button 
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} 
-          onClick={() => setScale(1)} 
-          style={btnStyle} title="Reset View"
-        >
-          <RefreshCcw size={18} />
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={() => setScale(1)} className={btnStyle} title="Reset View">
+          <RefreshCcw size={16} />
         </motion.button>
       </div>
       
       {/* Marker decoration */}
-      <div style={{ position: 'absolute', bottom: 8, right: 12, fontSize: 22, opacity: 0.18, pointerEvents: 'none', userSelect: 'none', zIndex: 0 }}>
+      <div className="absolute bottom-2 right-3 text-lg md:text-2xl opacity-20 pointer-events-none select-none z-0">
         🖊️
       </div>
     </div>

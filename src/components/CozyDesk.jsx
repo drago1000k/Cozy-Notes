@@ -9,7 +9,6 @@ function CoffeeCup({ isNight }) {
   const steamColor = isNight ? 'rgba(200,180,150,0.6)' : 'rgba(120,100,80,0.4)';
   return (
     <div className="relative" style={{ width: 36, height: 42 }}>
-      {/* Steam wisps */}
       <div className="absolute" style={{ bottom: 38, left: 6 }}>
         <div className="animate-steam1 absolute rounded-full" style={{ width: 4, height: 10, background: steamColor, filter: 'blur(1px)' }} />
       </div>
@@ -19,14 +18,9 @@ function CoffeeCup({ isNight }) {
       <div className="absolute" style={{ bottom: 38, left: 22 }}>
         <div className="animate-steam3 absolute rounded-full" style={{ width: 4, height: 8, background: steamColor, filter: 'blur(1px)' }} />
       </div>
-
-      {/* Cup body */}
       <div className="absolute rounded-b-xl" style={{ width: 30, height: 26, bottom: 8, left: 3, background: 'linear-gradient(160deg, #f5ede0 0%, #e8d5b7 100%)', border: '2px solid #c4956a' }} />
-      {/* Coffee liquid */}
       <div className="absolute rounded-full" style={{ width: 22, height: 10, bottom: 24, left: 7, background: '#6f4e37' }} />
-      {/* Handle */}
       <div className="absolute rounded-full" style={{ width: 10, height: 14, bottom: 12, left: 24, border: '3px solid #c4956a', background: 'transparent' }} />
-      {/* Saucer */}
       <div className="absolute rounded-full" style={{ width: 36, height: 8, bottom: 0, left: 0, background: 'linear-gradient(160deg, #d4b896 0%, #c4956a 100%)', border: '1px solid #a0714f' }} />
     </div>
   );
@@ -36,16 +30,13 @@ function CoffeeCup({ isNight }) {
 function Laptop({ timerMode, timeLeft, onToggleTimer }) {
   return (
     <div className="relative" style={{ width: 100, height: 70 }}>
-      {/* Screen */}
       <div
         className="absolute rounded-t-lg flex flex-col items-center pt-2 cursor-pointer"
         onClick={onToggleTimer}
         style={{
           width: 90, height: 52, top: 0, left: 5,
-          background: 'linear-gradient(135deg, #2d3748 0%, #1a202c 100%)',
-          border: '3px solid #4a5568', overflow: 'hidden',
-          boxShadow: timerMode ? '0 0 15px rgba(236, 72, 153, 0.4)' : 'none',
-          transition: 'box-shadow 0.3s',
+          background: 'linear-gradient(135deg, #2d3748 0%, #1a202c 100%)', border: '3px solid #4a5568', overflow: 'hidden',
+          boxShadow: timerMode ? '0 0 15px rgba(236, 72, 153, 0.4)' : 'none', transition: 'box-shadow 0.3s',
         }}
         title="Toggle Pomodoro Timer"
       >
@@ -62,7 +53,6 @@ function Laptop({ timerMode, timeLeft, onToggleTimer }) {
             <div className="h-1.5 rounded-full mb-1" style={{ background: '#76e4f7', width: '38%', opacity: 0.8 }} />
             <div className="h-1.5 rounded-full mb-1" style={{ background: '#b794f4', width: '52%', opacity: 0.7 }} />
             <div className="h-1 rounded-full" style={{ background: '#68d391', width: '30%', opacity: 0.5 }} />
-            {/* Play button hint */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black/40 transition-opacity">
               <span style={{ fontSize: 18 }}>⏱️</span>
             </div>
@@ -70,10 +60,7 @@ function Laptop({ timerMode, timeLeft, onToggleTimer }) {
         )}
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(72,187,120,0.08) 0%, transparent 70%)' }} />
       </div>
-      
-      {/* Base */}
       <div className="absolute" style={{ width: 100, height: 8, bottom: 4, left: 0, background: 'linear-gradient(180deg, #4a5568 0%, #2d3748 100%)', borderRadius: '2px 2px 6px 6px', border: '2px solid #2d3748' }} />
-      {/* Hinge line */}
       <div className="absolute" style={{ width: 96, height: 2, bottom: 16, left: 2, background: '#2d3748', borderRadius: 1 }} />
     </div>
   );
@@ -113,15 +100,11 @@ function Books() {
 function DeskLamp({ isNight }) {
   return (
     <div className="relative" style={{ width: 40, height: 60 }}>
-      {/* Base */}
       <div className="absolute" style={{ width: 24, height: 6, bottom: 0, left: 8, background: '#4a5568', borderRadius: '4px 4px 2px 2px' }} />
-      {/* Arm SVG */}
       <svg className="absolute" style={{ bottom: 4, left: 0 }} width="40" height="50">
         <path d="M20 46 L20 25 L30 12" fill="none" stroke="#718096" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      {/* Head + Bulb Wrapper */}
       <div className="absolute flex justify-center" style={{ width: 22, height: 16, bottom: 26, left: 19, background: '#2d3748', borderRadius: '8px 8px 4px 4px', transform: 'rotate(-45deg)', transformOrigin: 'top center', zIndex: 5 }}>
-        {/* Light Bulb */}
         <div className={`absolute ${isNight ? 'lamp-glow' : ''}`} style={{ width: 14, height: 6, bottom: -5, background: isNight ? '#fef08a' : '#cbd5e1', borderRadius: '0 0 8px 8px', transition: 'all 1s' }} />
       </div>
     </div>
@@ -132,9 +115,13 @@ export default function CozyDesk({ mascotState, timerMode, timeLeft, onToggleTim
   const isNight = mood === 'magical';
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 flex justify-center items-end pointer-events-none z-10">
-      {/* Desk surface */}
-      <div className="relative flex items-end" style={{ width: '70%', maxWidth: 900 }}>
+    <div className="absolute bottom-0 left-0 right-0 flex justify-center items-end pointer-events-none z-10 overflow-hidden md:overflow-visible">
+      {/* RESPONSIVE FIX:
+        - Mobile: width 160%, scale down to 65% so everything fits on the screen.
+        - Desktop (md): width 70%, normal scale 100%. 
+      */}
+      <div className="relative flex items-end w-[160%] md:w-[70%] max-w-[900px] origin-bottom scale-[0.65] md:scale-100 -mb-4 md:mb-0">
+        
         {/* Desk top surface */}
         <div className="wood-desk absolute bottom-[60px] left-0 right-0 rounded-t-xl pointer-events-auto" style={{ height: 28, boxShadow: '0 -4px 12px rgba(0,0,0,0.15), inset 0 2px 4px rgba(255,255,255,0.2)', border: '2px solid var(--color-wood-dark)', borderBottom: 'none' }} />
 
@@ -150,16 +137,13 @@ export default function CozyDesk({ mascotState, timerMode, timeLeft, onToggleTim
         <div className="absolute rounded-b-lg" style={{ width: 18, height: 60, bottom: 0, right: 24, background: 'linear-gradient(180deg, var(--color-wood-dark) 0%, var(--color-wood) 100%)', border: '2px solid var(--color-wood-dark)' }} />
 
         {/* Items on desk */}
-        <div className="relative w-full flex justify-between items-end px-10 md:px-16 pointer-events-auto" style={{ paddingBottom: 82 }}>
+        <div className="relative w-full flex justify-between items-end px-10 md:px-16 pointer-events-auto pb-[82px]">
           
-          {/* TRÁI: Đèn + Cây + Sách + Archive Chest (MỚI CHUYỂN QUA) */}
-          <div className="flex items-end gap-2 md:gap-4">
+          {/* TRÁI: Đèn + Cây + Sách + Archive Chest */}
+          <div className="flex items-end gap-3 md:gap-4">
             <DeskLamp isNight={isNight} />
             <PlantPot />
-            <div className="hidden sm:block">
-              <Books />
-            </div>
-            {/* Archive Chest giờ nằm cạnh chồng sách */}
+            <Books />
             <ArchiveChest archivedCount={archivedCount} onOpen={onOpenArchive} />
           </div>
 
@@ -175,11 +159,8 @@ export default function CozyDesk({ mascotState, timerMode, timeLeft, onToggleTim
 
           {/* PHẢI: Bình sữa, Ly cà phê, Lofi Radio */}
           <div className="flex items-end gap-3 md:gap-5" style={{ pointerEvents: 'auto' }}>
-            <div className="hidden sm:block">
-              <BottleCompanion onSend={onSendBottle} />
-            </div>
+            <BottleCompanion onSend={onSendBottle} />
             <CoffeeCup isNight={isNight} />
-            {/* Lofi Radio giờ nằm sát bên phải */}
             <LofiRadio />
           </div>
           
