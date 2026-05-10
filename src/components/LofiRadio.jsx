@@ -17,7 +17,7 @@ export default function LofiRadio() {
   const audioRef = useRef(null);
   const radioRef = useRef(null);
 
-  // Thêm logic nhận diện Mobile
+  // Nhận diện Mobile
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -33,13 +33,14 @@ export default function LofiRadio() {
   // Close overlay on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (isMobile) return; // Trên mobile, click ra ngoài đã được xử lý bởi lớp nền mờ
       if (radioRef.current && !radioRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
     if (isOpen) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
 
   // Adjust volume
   useEffect(() => {
@@ -57,38 +58,33 @@ export default function LofiRadio() {
         });
       }
     }
-  }, [currentTrack, isPlaying]); // Trigger only when the track changes
+  }, [currentTrack, isPlaying]);
 
   // Handle play/pause toggle securely
   const handleTogglePlay = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
-      // setIsPlaying(false) will be naturally handled by the onPause native event
     } else {
       audioRef.current.play().catch(e => console.debug('Play prevented', e));
-      // setIsPlaying(true) will be naturally handled by the onPlay native event
     }
   };
 
-  // Skip forward, loops back to index 0 naturally
   const handleNext = () => {
     if (currentChannel.files.length > 0) {
       setCurrentTrackIndex((prev) => (prev + 1) % currentChannel.files.length);
     }
   };
 
-  // Skip backward
   const handlePrev = () => {
     if (currentChannel.files.length > 0) {
       setCurrentTrackIndex((prev) => (prev - 1 + currentChannel.files.length) % currentChannel.files.length);
     }
   };
 
-  // Called natively when track naturally ends
   const handleTrackEnded = () => {
     handleNext();
-    setIsPlaying(true); // Force state to remain playing for the next song
+    setIsPlaying(true); 
   };
 
   const handleChannelSelect = (channelId) => {
@@ -109,7 +105,7 @@ export default function LofiRadio() {
     return `${m}:${s}`;
   };
 
-  // Tách giao diện Popup ra một biến riêng để dễ đưa vào Portal
+  // Tách riêng nội dung Popup để tái sử dụng
   const popupContent = (
     <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.9 }}
@@ -117,13 +113,14 @@ export default function LofiRadio() {
       exit={{ opacity: 0, y: 10, scale: 0.9 }}
       className={`${isMobile ? 'relative' : 'absolute'} rounded-xl shadow-2xl overflow-hidden flex flex-col`}
       style={{
-        ...(isMobile ? {} : { bottom: 60, right: -60 }),
+        bottom: isMobile ? 'auto' : 60,
+        right: isMobile ? 'auto' : -60,
         width: 280, height: 380,
         background: 'linear-gradient(160deg, #fef7ed 0%, #fde6c4 100%)',
         border: '2px solid #c4956a',
         zIndex: 50,
       }}
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()} // Ngăn click xuyên xuống lớp nền
     >
       <div className="flex bg-[#e0be9c] p-1 border-b border-[#c4956a]">
         {TRACKS.map(channel => (
@@ -228,6 +225,7 @@ export default function LofiRadio() {
 
   return (
     <div className="relative" style={{ width: 44, height: 52 }} ref={radioRef}>
+      {/* Hidden Audio Element */}
       {currentTrack && (
         <audio
           ref={audioRef}
@@ -291,17 +289,33 @@ export default function LofiRadio() {
         <div className="absolute rounded-b" style={{ width: 6, height: 4, bottom: -2, right: 6, background: '#3d2b1f' }} />
       </motion.div>
 
-      {/* Render Popup via Portal on Mobile, inline on Desktop */}
-      <AnimatePresence>
-        {isOpen && (
-          isMobile ? createPortal(
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}>
-              {popupContent}
-            </div>,
-            document.body
-          ) : popupContent
-        )}
-      </AnimatePresence>
+      {/* CHỖ FIX LỖI: AnimatePresence phải nằm BÊN TRONG/HOẶC NGANG HÀNG Portal */}
+      {isMobile ? (
+        typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 9999,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
+                }}
+                onClick={() => setIsOpen(false)} // Click ra ngoài nền đen để đóng
+              >
+                {popupContent}
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )
+      ) : (
+        <AnimatePresence>
+          {isOpen && popupContent}
+        </AnimatePresence>
+      )}
     </div>
   );
 }

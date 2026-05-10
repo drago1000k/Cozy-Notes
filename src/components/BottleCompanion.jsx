@@ -7,7 +7,6 @@ export default function BottleCompanion({ onSend }) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Thêm logic nhận diện Mobile
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -24,7 +23,6 @@ export default function BottleCompanion({ onSend }) {
     }
   };
 
-  // Tách giao diện Popup ra một biến riêng
   const popupContent = (
     <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.9 }}
@@ -41,7 +39,7 @@ export default function BottleCompanion({ onSend }) {
         boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
         zIndex: 50,
       }}
-      onClick={(e) => e.stopPropagation()} // Ngăn click xuyên qua làm đóng popup
+      onClick={(e) => e.stopPropagation()} // Ngăn click xuyên xuống lớp nền mờ
     >
       <textarea
         autoFocus
@@ -85,7 +83,7 @@ export default function BottleCompanion({ onSend }) {
           Send
         </button>
       </div>
-      {/* Arrow pointing down (Ẩn đi trên mobile vì popup nằm giữa màn hình) */}
+      {/* Mũi tên chỉ hiển thị trên Desktop */}
       {!isMobile && (
         <div
           style={{
@@ -132,17 +130,33 @@ export default function BottleCompanion({ onSend }) {
         <div style={{ position: 'absolute', top: 18, left: 8, width: 8, height: 16, background: '#fff9c4', borderRadius: 2, transform: 'rotate(5deg)' }} />
       </motion.div>
 
-      {/* Render Popup via Portal on Mobile, inline on Desktop */}
-      <AnimatePresence>
-        {isOpen && (
-          isMobile ? createPortal(
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}>
-              {popupContent}
-            </div>,
-            document.body
-          ) : popupContent
-        )}
-      </AnimatePresence>
+      {/* CHỖ FIX LỖI: Wrap AnimatePresence bên trong tạo Portal */}
+      {isMobile ? (
+        typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 9999,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
+                }}
+                onClick={() => setIsOpen(false)} // Click ra ngoài nền đen để đóng
+              >
+                {popupContent}
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )
+      ) : (
+        <AnimatePresence>
+          {isOpen && popupContent}
+        </AnimatePresence>
+      )}
     </div>
   );
 }
