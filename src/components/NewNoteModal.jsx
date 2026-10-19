@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, PenLine, Palette, Bold, Italic, Underline } from 'lucide-react';
+import { X, PenLine, Palette, Bold, Italic, Underline, Mic, MicOff, Loader2 } from 'lucide-react';
+import { formatSpeechWithAI } from '../utils/aiAssistant';
 
 const NOTE_COLORS = [
   { bg: '#fef3c7', border: '#f59e0b', label: 'Amber' },
@@ -19,7 +20,14 @@ export default function NewNoteModal({ onClose, onAdd, onUpdate, editNote }) {
   const [colorIndex, setColorIndex] = useState(editNote && editNote.colorIndex !== undefined ? editNote.colorIndex : 0);
   const [formats, setFormats] = useState({ bold: false, italic: false, underline: false });
   const [isMouseDownOnBackdrop, setIsMouseDownOnBackdrop] = useState(false);
+
+  // Voice-to-text states
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [voiceError, setVoiceError] = useState('');
+
   const editorRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
     // Always prefill contentEditable with existing content in edit mode
@@ -29,6 +37,15 @@ export default function NewNoteModal({ onClose, onAdd, onUpdate, editNote }) {
     }
     editorRef.current?.focus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cleanup speech recognition on unmount to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
   }, []);
 
   const updateFormats = () => {
@@ -72,6 +89,91 @@ export default function NewNoteModal({ onClose, onAdd, onUpdate, editNote }) {
     if (e.key === 'Escape') {
       onClose();
     }
+  };
+
+  // ── Voice-to-Text: start / stop recording ──────────────────────────────────
+  const handleVoiceToggle = () => {
+    // Clear any previous error when user clicks the mic button
+    setVoiceError('');
+
+    if (isRecording) {
+      // Stop the ongoing recognition session
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    // Check browser support
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceError('Speech recognition is not supported in this browser. Try Chrome or Edge.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;       // Keep listening until manually stopped
+    recognition.interimResults = false;  // Only return final results
+    // Automatically use the browser/OS language (e.g. vi-VN for Vietnamese users)
+    // so speech is captured correctly before passing to the AI formatter
+    recognition.lang = navigator.language || 'vi-VN';
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognition.onerror = (event) => {
+      setIsRecording(false);
+      if (event.error !== 'aborted') {
+        setVoiceError(`Microphone error: ${event.error}. Please check permissions.`);
+      }
+    };
+
+    recognition.onresult = async (event) => {
+      // Collect all final transcripts from this session
+      let fullTranscript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          fullTranscript += event.results[i][0].transcript + ' ';
+        }
+      }
+      fullTranscript = fullTranscript.trim();
+
+      if (!fullTranscript) return;
+
+      // Stop recording and start AI formatting
+      recognition.stop();
+      setIsRecording(false);
+      setIsProcessingVoice(true);
+
+      try {
+        const { title: aiTitle, formattedText } = await formatSpeechWithAI(fullTranscript);
+
+        // Auto-fill the title if the field is currently empty
+        if (!title.trim()) {
+          setTitle(aiTitle);
+        }
+
+        // Append formatted text into the contentEditable editor
+        if (editorRef.current) {
+          // Convert plain-text line breaks to <br> so they render properly in contentEditable
+          const htmlText = formattedText.replace(/\n/g, '<br>');
+          editorRef.current.innerHTML = htmlText;
+          setText(htmlText);
+        }
+      } catch (err) {
+        setVoiceError('AI formatting failed: ' + err.message);
+      } finally {
+        setIsProcessingVoice(false);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
   };
 
   const color = NOTE_COLORS[colorIndex];
@@ -190,8 +292,8 @@ export default function NewNoteModal({ onClose, onAdd, onUpdate, editNote }) {
                   }}
                 />
 
-                {/* Formatting Toolbar */}
-                <div className="flex gap-2 px-3 pt-2 relative z-10" style={{ borderBottom: `1px solid ${color.border}20`, paddingBottom: 6 }}>
+                {/* Formatting Toolbar — includes the Mic button */}
+                <div className="flex gap-2 px-3 pt-2 relative z-10 items-center" style={{ borderBottom: `1px solid ${color.border}20`, paddingBottom: 6 }}>
                   <button
                     onPointerDown={(e) => handleFormat(e, 'bold')}
                     className={`p-1 rounded transition-all ${formats.bold ? 'shadow-inner' : 'hover:bg-black/5'}`}
@@ -216,6 +318,70 @@ export default function NewNoteModal({ onClose, onAdd, onUpdate, editNote }) {
                   >
                     <Underline size={14} color={color.border} />
                   </button>
+
+                  {/* Divider */}
+                  <div style={{ width: 1, height: 16, background: `${color.border}30`, margin: '0 4px' }} />
+
+
+                  {/* Voice-to-Text Microphone Button */}
+                  <motion.button
+                    onClick={handleVoiceToggle}
+                    disabled={isProcessingVoice}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.92 }}
+                    title={isRecording ? 'Stop recording' : 'Dictate note with AI'}
+                    className="p-1 rounded-full relative flex items-center justify-center transition-all"
+                    style={{
+                      background: isRecording
+                        ? 'rgba(239,68,68,0.15)'
+                        : isProcessingVoice
+                        ? 'rgba(251,191,36,0.15)'
+                        : 'transparent',
+                      border: isRecording ? '1.5px solid rgba(239,68,68,0.4)' : '1.5px solid transparent',
+                      cursor: isProcessingVoice ? 'wait' : 'pointer',
+                      width: 26,
+                      height: 26,
+                    }}
+                  >
+                    {/* Pulsing red ring when recording */}
+                    {isRecording && (
+                      <motion.span
+                        className="absolute inset-0 rounded-full"
+                        animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ background: 'rgba(239,68,68,0.35)' }}
+                      />
+                    )}
+
+                    {isProcessingVoice ? (
+                      <motion.span
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        style={{ display: 'flex' }}
+                      >
+                        <Loader2 size={14} color="#f59e0b" />
+                      </motion.span>
+                    ) : isRecording ? (
+                      <MicOff size={14} color="#ef4444" />
+                    ) : (
+                      <Mic size={14} color={color.border} />
+                    )}
+                  </motion.button>
+
+                  {/* Recording status label */}
+                  <AnimatePresence>
+                    {(isRecording || isProcessingVoice) && (
+                      <motion.span
+                        initial={{ opacity: 0, x: -4 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -4 }}
+                        className="text-xs font-semibold"
+                        style={{ color: isRecording ? '#ef4444' : '#f59e0b' }}
+                      >
+                        {isRecording ? 'Listening…' : 'AI formatting…'}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Body Textarea (ContentEditable) */}
@@ -238,6 +404,21 @@ export default function NewNoteModal({ onClose, onAdd, onUpdate, editNote }) {
                   data-placeholder="What's on your mind?..."
                 />
               </div>
+
+              {/* Voice error message */}
+              <AnimatePresence>
+                {voiceError && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="text-xs mt-1 px-1"
+                    style={{ color: '#ef4444' }}
+                  >
+                    ⚠ {voiceError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
 
               {/* Character count */}
               <div className="flex justify-end items-center mt-1">
@@ -333,7 +514,7 @@ export default function NewNoteModal({ onClose, onAdd, onUpdate, editNote }) {
               className="text-center text-xs pb-2"
               style={{ color: `${color.border}60` }}
             >
-              ⌘ + Enter to add
+              ⌘ + Enter to add • 🎤 Mic for voice dictation
             </p>
           </div>
         </motion.div>

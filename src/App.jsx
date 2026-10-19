@@ -12,9 +12,10 @@ import AuthScreen from './components/AuthScreen';
 import ArchiveModal from './components/ArchiveModal';
 import { toggleRainSound, playSplash, playChime, playMoodSound, playAlarm, playNewNoteSound } from './utils/audio';
 import { getAiResponse } from './utils/aiResponse';
+import { bulkOrganizeNotes, categorizeSingleNote } from './utils/aiAssistant';
 import { useAuth } from './context/AuthContext';
 import { useFirestoreSync } from './hooks/useFirestoreSync';
-import { LogOut } from 'lucide-react';
+import { LogOut, Sparkles } from 'lucide-react';
 
 function formatDate() {
   return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -59,6 +60,11 @@ export default function App() {
   const [, setMaxZIndex] = useState(20);
   
   const [boardScale, setBoardScale] = useState(1);
+
+  // ── Feature 2: Auto-Organize toggle state ──────────────────────────────────
+  const [isAutoOrganize, setIsAutoOrganize] = useState(false);
+  // Tracks whether a bulk-organize AI call is currently in flight
+  const [isOrganizing, setIsOrganizing] = useState(false);
 
   const whiteboardRef = useRef(null);
   const viewportRef = useRef(null);
@@ -105,6 +111,51 @@ export default function App() {
     }
   }, [showModal, mascotState]);
 
+  // ── Feature 2: Bulk-organize effect ────────────────────────────────────────
+  // Fires whenever the Auto-Organize toggle is switched ON.
+  // Calls the AI, then animates all notes to their new cluster positions.
+  useEffect(() => {
+    if (!isAutoOrganize) return;
+
+    const activeNotes = notes.filter((n) => !n.archived);
+    if (activeNotes.length < 2) return; // Nothing meaningful to organize with < 2 notes
+
+    let cancelled = false;
+    setTimeout(() => setIsOrganizing(true), 0);
+
+    bulkOrganizeNotes(activeNotes)
+      .then((updates) => {
+        if (cancelled) return;
+        setNotes((prev) =>
+          prev.map((n) => {
+            const update = updates.find((u) => u.id === n.id);
+            if (!update) return n;
+            return {
+              ...n,
+              x: update.newX,
+              y: update.newY,
+              colorIndex: update.newColorIndex,
+            };
+          })
+        );
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('[Auto-Organize] bulkOrganizeNotes failed:', err);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsOrganizing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  // We intentionally only re-run when `isAutoOrganize` flips to true,
+  // not on every notes change, to avoid an infinite update loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoOrganize]);
+
   const handleSelectMood = useCallback((moodId) => {
     setMoodState((prev) => {
       if (prev.current === moodId) return prev;
@@ -139,21 +190,50 @@ export default function App() {
     });
   }, [setNotes]);
 
+  // ── Feature 2: Smart Insertion for New Notes ───────────────────────────────
+  // When Auto-Organize is ON, the note is placed at a random position first
+  // (immediate feedback), then the AI figures out where it really belongs and
+  // flies the note to its correct cluster via a follow-up state update.
   const handleAddNote = useCallback((title, text, colorIndex, isAi = false) => {
     const pos = getRandomNotePosition(viewportRef.current, boardScale);
     const rotation = (Math.random() - 0.5) * 6;
     const newNoteId = `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    
+
     setMaxZIndex((prevZ) => {
       const nextZ = prevZ + 1;
       setNotes((prev) => {
         if (prev.some(n => n.id === newNoteId)) return prev;
-        return [...prev, { id: newNoteId, title, text, colorIndex, x: pos.x, y: pos.y, rotation, zIndex: nextZ, done: false, date: formatDate(), isAi }];
+        const newNote = {
+          id: newNoteId, title, text, colorIndex,
+          x: pos.x, y: pos.y, rotation, zIndex: nextZ,
+          done: false, date: formatDate(), isAi,
+        };
+
+        // If Auto-Organize is active, immediately schedule an AI categorization
+        // call so the note will "fly" to its correct cluster after the AI responds.
+        if (isAutoOrganize) {
+          const existingActiveNotes = prev.filter((n) => !n.archived);
+          categorizeSingleNote(newNote, existingActiveNotes)
+            .then(({ newX, newY, newColorIndex }) => {
+              setNotes((current) =>
+                current.map((n) =>
+                  n.id === newNoteId
+                    ? { ...n, x: newX, y: newY, colorIndex: newColorIndex }
+                    : n
+                )
+              );
+            })
+            .catch((err) => {
+              console.error('[Auto-Organize] categorizeSingleNote failed:', err);
+            });
+        }
+
+        return [...prev, newNote];
       });
       return nextZ;
     });
     playNewNoteSound();
-  }, [setNotes, boardScale]);
+  }, [setNotes, boardScale, isAutoOrganize]);
 
   const handleUpdateNote = useCallback((id, updatedData) => {
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...updatedData } : n)));
@@ -286,6 +366,63 @@ export default function App() {
           <div className="flex items-center gap-1.5 md:gap-3">
             <MoodSelector currentMood={currentMood} onSelectMood={handleSelectMood} />
 
+            {/* ── Feature 2: Auto-Organize Toggle ── */}
+            <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 rounded-full bg-[#fbe6d4] border border-[#e0be9c]">
+              <Sparkles
+                size={14}
+                color={isAutoOrganize ? '#7c3aed' : '#a3826a'}
+                style={{ flexShrink: 0 }}
+              />
+              <span className="hidden md:inline text-xs font-semibold text-[#5a311b] font-['Nunito'] whitespace-nowrap">
+                Auto-Organize
+              </span>
+              {/* Toggle switch */}
+              <button
+                id="auto-organize-toggle"
+                onClick={() => setIsAutoOrganize((v) => !v)}
+                disabled={isOrganizing}
+                title={isAutoOrganize ? 'Turn off Auto-Organize' : 'Turn on Auto-Organize (AI clusters notes semantically)'}
+                aria-pressed={isAutoOrganize}
+                className="relative inline-flex items-center rounded-full transition-colors duration-300 focus:outline-none"
+                style={{
+                  width: 36,
+                  height: 20,
+                  background: isAutoOrganize
+                    ? 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)'
+                    : 'rgba(163,130,106,0.35)',
+                  border: `1.5px solid ${isAutoOrganize ? '#7c3aed80' : '#a3826a40'}`,
+                  cursor: isOrganizing ? 'wait' : 'pointer',
+                  boxShadow: isAutoOrganize ? '0 0 8px rgba(124,58,237,0.4)' : 'none',
+                  transition: 'all 0.3s',
+                }}
+              >
+                <motion.span
+                  layout
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  className="absolute rounded-full bg-white shadow"
+                  style={{
+                    width: 14,
+                    height: 14,
+                    left: isAutoOrganize ? 18 : 2,
+                    top: 2,
+                  }}
+                />
+                {/* Spinner overlay while AI is organizing */}
+                {isOrganizing && (
+                  <motion.span
+                    className="absolute inset-0 flex items-center justify-center"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <span
+                      className="rounded-full border-2 border-white/60 border-t-white"
+                      style={{ width: 10, height: 10, display: 'block' }}
+                    />
+                  </motion.span>
+                )}
+              </button>
+            </div>
+
             {/* Note count - hides text on mobile */}
             <div className="flex items-center gap-1 md:gap-2 px-2 py-1 md:px-3 md:py-1.5 rounded-full bg-[#fbe6d4] border border-[#e0be9c]">
               <span className="text-sm">📋</span>
@@ -322,6 +459,34 @@ export default function App() {
           </div>
         </motion.nav>
       )}
+
+      {/* ── Auto-Organize status banner ── */}
+      <AnimatePresence>
+        {isOrganizing && (
+          <motion.div
+            initial={{ y: -40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -40, opacity: 0 }}
+            className="fixed top-[56px] md:top-[64px] left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
+            style={{
+              background: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
+              color: 'white',
+              fontSize: 13,
+              fontWeight: 600,
+              fontFamily: 'Nunito, sans-serif',
+              boxShadow: '0 4px 20px rgba(124,58,237,0.4)',
+            }}
+          >
+            <motion.span
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+            >
+              ✨
+            </motion.span>
+            AI is organizing your notes…
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Whiteboard ── */}
       {currentUser && (
